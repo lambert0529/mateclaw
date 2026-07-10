@@ -87,6 +87,7 @@ services:
       dockerfile: mateclaw-server/Dockerfile
       args:
         MAVEN_FLAGS: ${MAVEN_FLAGS:-}
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
     container_name: mateclaw-server
     restart: unless-stopped
     depends_on:

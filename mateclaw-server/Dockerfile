@@ -5,15 +5,25 @@
 #   build container. These files are later copied into the JAR's classpath so
 #   Spring Boot serves the SPA at the root URL.
 FROM node:22-alpine AS frontend-builder
+# China network: pass --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+# (or set NPM_REGISTRY in .env, which docker-compose wires through as a
+# build arg) to route both the pnpm bootstrap and the project dependency
+# install through the mirror, avoiding ETIMEDOUT against registry.npmjs.org.
+# Empty value falls back to the npm default registry.
+#
+# The pnpm-lock.yaml (v9) stores only integrity hashes — no hardcoded
+# tarball URLs — so --frozen-lockfile + a different registry fetch from
+# the mirror without integrity drift.
+ARG NPM_REGISTRY=""
 # Pin pnpm to a major version so the Docker build doesn't break when the npm
 # `latest` tag jumps majors. pnpm v10+ blocks dependency lifecycle scripts by
 # default; the allowed packages live under `pnpm.onlyBuiltDependencies` in
 # mateclaw-ui/package.json.
-RUN npm install -g pnpm@10 --silent
+RUN npm install -g pnpm@10 --silent ${NPM_REGISTRY:+--registry=$NPM_REGISTRY}
 WORKDIR /frontend
 # Install dependencies first (layer cache)
 COPY mateclaw-ui/package.json mateclaw-ui/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile ${NPM_REGISTRY:+--registry=$NPM_REGISTRY}
 # Copy source and build
 COPY mateclaw-ui/ ./
 # Override outDir: vite.config.ts writes to ../mateclaw-server/…/static which
